@@ -25,6 +25,19 @@
             flex-direction: column;
         }
 
+        /* 数値入力のスピンボタン（矢印）を消す */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
         .container {
             display: flex;
             flex-direction: column;
@@ -323,7 +336,7 @@
         }
 
         .expense-item-amount {
-            font-size: 13px;
+            font-size: 16px;
             color: #666;
             cursor: pointer;
             padding: 4px 8px;
@@ -350,6 +363,7 @@
 
         .expense-item-actions {
             display: flex;
+            flex-direction: column;
             gap: 8px;
             margin-left: 10px;
             flex-shrink: 0;
@@ -459,7 +473,7 @@
         }
 
         .income-item-amount {
-            font-size: 13px;
+            font-size: 16px;
             color: #666;
             cursor: pointer;
             padding: 4px 8px;
@@ -486,6 +500,7 @@
 
         .income-item-actions {
             display: flex;
+            flex-direction: column;
             gap: 8px;
             margin-left: 10px;
             flex-shrink: 0;
@@ -564,30 +579,34 @@
 
             .expense-item,
             .income-item {
-                flex-direction: column;
-                align-items: flex-start;
+                /* リストアイテムは横並びを維持 */
+                flex-direction: row;
+                align-items: center;
+                padding: 10px;
             }
 
             .expense-item-actions,
             .income-item-actions {
-                margin-left: 0;
-                margin-top: 10px;
-                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                margin-left: 10px;
+                margin-top: 0;
+                width: auto;
             }
 
             .expense-item-actions button,
             .income-item-actions button {
-                flex: 1;
+                padding: 6px 8px;
+                font-size: 11px;
+                min-width: 75px;
+                /* ボタン幅を確保 */
             }
 
-            .nav {
-                padding: 8px 10px;
-                padding-bottom: calc(8px + env(safe-area-inset-bottom));
-            }
-
-            .nav button {
-                font-size: 12px;
-                padding: 10px 8px;
+            /* 名前と金額のエリアを少し狭めてボタンエリアを確保 */
+            .expense-item-info,
+            .income-item-info {
+                padding-right: 5px;
             }
         }
 
@@ -600,6 +619,88 @@
             .income-item-actions {
                 flex-direction: column;
             }
+        }
+
+        /* ドラッグ中のスタイル */
+        .dragging {
+            opacity: 0.8;
+            background-color: #fafbfc;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: scale(1.02);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* 金額入力補助ボタンのスタイル */
+        .amount-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            position: relative;
+        }
+
+        .input-relative {
+            position: relative;
+            flex: 1;
+        }
+
+        .amount-input-container input {
+            width: 100%;
+            padding-right: 35px;
+            /* クリアボタン用の余白 */
+        }
+
+        .btn-clear-input {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #cbd5e0;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 5;
+        }
+
+        .btn-clear-input:hover {
+            background: #a0aec0;
+        }
+
+        .amount-helper-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .btn-amount-add {
+            padding: 4px 8px;
+            font-size: 11px;
+            background-color: #e0e6ed;
+            color: #4a5568;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            height: 50%;
+            /* 2つで入力欄と同じ高さに */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .btn-amount-add:active {
+            background-color: #cbd5e0;
+            transform: scale(0.95);
         }
     </style>
 
@@ -650,7 +751,19 @@
                         </div>
                         <div class="form-group">
                             <label for="income-amount">金額</label>
-                            <input type="number" id="income-amount" placeholder="0" min="0">
+                            <div class="amount-input-container">
+                                <div class="input-relative">
+                                    <input type="number" id="income-amount" placeholder="0" min="0">
+                                    <button class="btn-clear-input"
+                                        onclick="clearInputAmount('income-amount')">×</button>
+                                </div>
+                                <div class="amount-helper-buttons">
+                                    <button class="btn-amount-add"
+                                        onclick="addAmountToInput('income-amount', 1000)">+1000</button>
+                                    <button class="btn-amount-add"
+                                        onclick="addAmountToInput('income-amount', 100)">+100</button>
+                                </div>
+                            </div>
                         </div>
                         <button class="add-button" id="add-income-btn">+ 追加</button>
                     </div>
@@ -672,7 +785,19 @@
                         </div>
                         <div class="form-group">
                             <label for="expense-amount">金額</label>
-                            <input type="number" id="expense-amount" placeholder="0" min="0">
+                            <div class="amount-input-container">
+                                <div class="input-relative">
+                                    <input type="number" id="expense-amount" placeholder="0" min="0">
+                                    <button class="btn-clear-input"
+                                        onclick="clearInputAmount('expense-amount')">×</button>
+                                </div>
+                                <div class="amount-helper-buttons">
+                                    <button class="btn-amount-add"
+                                        onclick="addAmountToInput('expense-amount', 1000)">+1000</button>
+                                    <button class="btn-amount-add"
+                                        onclick="addAmountToInput('expense-amount', 100)">+100</button>
+                                </div>
+                            </div>
                         </div>
                         <button class="add-button" id="add-expense-btn">+ 追加</button>
                     </div>
@@ -736,7 +861,7 @@
         }
 
         function addIncome(name, amount) {
-            if (!name || name.trim() === '' || isNaN(amount) || amount <= 0) {
+            if (!name || name.trim() === '' || isNaN(amount) || amount < 0) {
                 alert('項目名と正当な金額を入力してください');
                 return null;
             }
@@ -756,7 +881,7 @@
         }
 
         function addExpense(name, amount) {
-            if (!name || name.trim() === '' || isNaN(amount) || amount <= 0) {
+            if (!name || name.trim() === '' || isNaN(amount) || amount < 0) {
                 alert('項目名と正当な金額を入力してください');
                 return null;
             }
@@ -802,6 +927,121 @@
                 saveDataToStorage();
                 updateSummaryDisplay();
                 console.log('支出を削除');
+            }
+        }
+
+        // ============================================
+        // ドラッグ＆ドロップ並べ替え
+        // ============================================
+
+        function enableDragAndDrop(listId, type, renderCallback) {
+            const listElement = document.getElementById(listId);
+            let draggedItem = null;
+            let touchTimer = null;
+            let startY = 0;
+            let initialIndex = -1;
+
+            listElement.addEventListener('touchstart', (e) => {
+                const item = e.target.closest('.expense-item, .income-item');
+                // 入力フォームやボタンでのタッチは除外
+                if (!item || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+
+                startY = e.touches[0].clientY;
+
+                // 長押し判定 (500ms)
+                touchTimer = setTimeout(() => {
+                    draggedItem = item;
+                    initialIndex = Array.from(listElement.children).indexOf(item);
+                    item.classList.add('dragging');
+                    // 振動フィードバック (対応デバイスのみ)
+                    if (navigator.vibrate) navigator.vibrate(50);
+                }, 500);
+            }, { passive: false });
+
+            listElement.addEventListener('touchmove', (e) => {
+                if (!draggedItem) {
+                    // 長押し成立前に大きく動かしたらキャンセル
+                    if (touchTimer && Math.abs(e.touches[0].clientY - startY) > 10) {
+                        clearTimeout(touchTimer);
+                        touchTimer = null;
+                    }
+                    return;
+                }
+
+                e.preventDefault(); // スクロール阻止
+                const touch = e.touches[0];
+                const elementAfter = getDragAfterElement(listElement, touch.clientY);
+
+                if (elementAfter == null) {
+                    listElement.appendChild(draggedItem);
+                } else {
+                    listElement.insertBefore(draggedItem, elementAfter);
+                }
+            }, { passive: false });
+
+            listElement.addEventListener('touchend', () => {
+                if (touchTimer) clearTimeout(touchTimer);
+                if (!draggedItem) return;
+
+                draggedItem.classList.remove('dragging');
+
+                // データ配列の並び替え
+                updateDataOrder(listElement, type);
+
+                draggedItem = null;
+                touchTimer = null;
+            });
+
+            // キャンセル関連
+            listElement.addEventListener('touchcancel', () => {
+                if (touchTimer) clearTimeout(touchTimer);
+                if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null;
+                    // 元に戻す処理が必要なら追加（今回は簡略化のため現状維持で再描画が安全かも）
+                    renderCallback();
+                }
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.expense-item:not(.dragging), .income-item:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function updateDataOrder(container, type) {
+            // 対象のデータ配列を取得
+            const dataArray = (type === 'income') ? incomeData : expenseData;
+            const newOrderIds = Array.from(container.children).map(el => {
+                // DOM要素からIDを特定する必要がある。
+                // 現在のレンダリング処理でdata-id属性などを付与していない場合、追加が必要。
+                // 仮にレンダリング時に activeInputId などを参照している箇所があるが、
+                // DOMにIDを持たせるのが確実。
+                return el.dataset.id;
+            }).filter(id => id); // 空のIDを除外
+
+            // IDに基づいて配列を再構築
+            const newDataArray = [];
+            newOrderIds.forEach(id => {
+                const item = dataArray.find(d => d.id === id);
+                if (item) newDataArray.push(item);
+            });
+
+            // dataArrayの中身を入れ替える
+            // (参照渡しされた配列の中身を書き換える必要があるため、spliceを使う)
+            if (newDataArray.length === dataArray.length) {
+                dataArray.splice(0, dataArray.length, ...newDataArray);
+                saveDataToStorage();
+                console.log('並び替え保存完了');
             }
         }
 
@@ -958,7 +1198,7 @@
             const input = item.querySelector('.amount-input');
             const newAmount = Number(input.value);
 
-            if (!isNaN(newAmount) && newAmount > 0) {
+            if (!isNaN(newAmount) && newAmount >= 0) {
                 updateIncome(id, { amount: newAmount });
                 display.textContent = formatCurrency(newAmount);
             } else {
@@ -1068,7 +1308,7 @@
             const input = item.querySelector('.amount-input');
             const newAmount = Number(input.value);
 
-            if (!isNaN(newAmount) && newAmount > 0) {
+            if (!isNaN(newAmount) && newAmount >= 0) {
                 updateExpense(id, { amount: newAmount });
                 display.textContent = formatCurrency(newAmount);
             } else {
@@ -1104,6 +1344,10 @@
             updateSummaryDisplay();
             renderExpenseList();
             renderIncomeList();
+
+            // ドラッグ＆ドロップの有効化
+            enableDragAndDrop('income-list', 'income', renderIncomeList);
+            enableDragAndDrop('expense-list', 'expense', renderExpenseList);
 
             document.getElementById('add-expense-btn').addEventListener('click', function () {
                 const nameInput = document.getElementById('expense-name');
@@ -1151,6 +1395,19 @@
                 this.classList.add('active');
             });
         });
+
+        function addAmountToInput(inputId, amount) {
+            const input = document.getElementById(inputId);
+            const currentValue = Number(input.value) || 0;
+            input.value = currentValue + amount;
+            input.focus();
+        }
+
+        function clearInputAmount(inputId) {
+            const input = document.getElementById(inputId);
+            input.value = '';
+            input.focus();
+        }
     </script>
 
     <script>
